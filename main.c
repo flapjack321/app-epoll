@@ -1,53 +1,40 @@
 #include <stdio.h>
+#include <unistd.h>
 
 /* Import user configuration: */
-#ifdef __Unikraft__
-#include <uk/config.h>
-#endif /* __Unikraft__ */
+#include <sys/epoll.h>
+#include <uk/print.h>
 
-#if CONFIG_APPHELLOWORLD_SPINNER
-#include <time.h>
-#include <errno.h>
-#include "monkey.h"
 
-static void millisleep(unsigned int millisec)
+int main(int argc __unused, char *argv[] __unused)
 {
-	struct timespec ts;
-	int ret;
+        int epoll_fd;
+        int stdin_fd = 0;
+        struct epoll_event event;
 
-	ts.tv_sec = millisec / 1000;
-	ts.tv_nsec = (millisec % 1000) * 1000000;
-	do
-		ret = nanosleep(&ts, &ts);
-	while (ret && errno == EINTR);
-}
-#endif /* CONFIG_APPHELLOWORLD_SPINNER */
+        uk_pr_debug("running main.c from app/helloworld\n");
+	epoll_fd = epoll_create(0);
 
-int main(int argc, char *argv[])
-{
-#if CONFIG_APPHELLOWORLD_PRINTARGS || CONFIG_APPHELLOWORLD_SPINNER
-	int i;
-#endif
+	if(epoll_fd < 0) {
+    		perror("Failed to create epoll file descriptor\n");
+    		return 1;
+  	}
+	uk_pr_debug("epoll file descriptor opened successfully (fd = %d)\n", epoll_fd);
 
-	printf("Hello world!\n");
+	/* Listen for input on file descriptor 0 (stdin) */
+	event.events = EPOLLIN;
+	event.data.fd = stdin_fd;
 
-#if CONFIG_APPHELLOWORLD_PRINTARGS
-	printf("Arguments: ");
-	for (i=0; i<argc; ++i)
-		printf(" \"%s\"", argv[i]);
-	printf("\n");
-#endif /* CONFIG_APPHELLOWORLD_PRINTARGS */
+        if(epoll_ctl(epoll_fd, EPOLL_CTL_ADD, stdin_fd, &event) < 0)
+        {
+                perror("failed to add file descriptor to epoll\n");
+                close(epoll_fd);
+                return 1;
+        }
 
-#if CONFIG_APPHELLOWORLD_SPINNER
-	i = 0;
-	printf("\n\n\n");
-	for (;;) {
-		i %= (monkey3_frame_count * 3);
-		printf("\r\033[2A %s \n", monkey3[i++]);
-		printf(" %s \n",          monkey3[i++]);
-		printf(" %s ",            monkey3[i++]);
-		fflush(stdout);
-		millisleep(250);
-	}
-#endif /* CONFIG_APPHELLOWORLD_SPINNER */
+  	if(close(epoll_fd)) {
+    		perror("Failed to close epoll file descriptor\n");
+    		return 1;
+  	}
+  	return 0;
 }

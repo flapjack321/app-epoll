@@ -1,12 +1,26 @@
 specification: '0.4'
 
-unikraft: '0.4'
+unikraft:
+  version: staging
+  kconfig:
+    - CONFIG_LIBUKTIME=y
+    - CONFIG_LIBUKALLOC=y
+    - CONFIG_LIBNEWLIBM=y
+    - CONFIG_LIBVFSCORE=y
+    - CONFIG_LIBPOSIX_PROCESS=y
+    - CONFIG_LIBPOSIX_USER=y
+    - CONFIG_UKDEBUG=y
+    - CONFIG_LIBUKDEBUG_PRINTK_INFO=y
+    - CONFIG_LIBUKDEBUG_PRINTD=y
 
 architectures:
   x86_64: true
-  arm64: true
       
 platforms:
-  linuxu: true
   kvm: true
-  xen: true
+
+libraries:
+  newlib:
+    version: staging
+    kconfig:
+      - CONFIG_LIBNEWLIBC=y
